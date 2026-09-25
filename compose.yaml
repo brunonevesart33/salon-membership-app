@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: salon_membership
+      POSTGRES_USER: salon_app
+      POSTGRES_PASSWORD: local_dev_only
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - salon_membership_db:/var/lib/postgresql/data
+
+volumes:
+  salon_membership_db:

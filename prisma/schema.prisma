@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Locale {
+  pt
+  en
+  es
+  fr
+  de
+}
+
+enum Category {
+  HAIRDRESSING
+  HEAD_SPA
+}
+
+enum Commitment {
+  SHORT
+  LONG
+}
+
+enum SubscriptionStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  PAST_DUE
+  UNPAID
+  CANCELED
+}
+
+enum PaymentMethod {
+  STRIPE
+  CASH
+}
+
+enum PaymentStatus {
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  MANUAL_CASH
+}
+
+model Store {
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  name          String
+  address       String?
+  isActive      Boolean         @default(true)
+  products      ProductStore[]
+  subscriptions Subscription[]
+  prices        PlanStorePrice[]
+  clients       Client[]
+}
+
+model AdminUser {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  name               String
+  preferredLanguage  Locale    @default(pt)
+  recordedPayments   Payment[]
+}
+
+model Client {
+  id                String         @id @default(cuid())
+  email             String         @unique
+  passwordHash      String
+  name              String
+  phone             String
+  homeStoreId       String
+  homeStore         Store          @relation(fields: [homeStoreId], references: [id])
+  preferredLanguage Locale         @default(pt)
+  createdAt         DateTime       @default(now())
+  subscriptions     Subscription[]
+}
+
+model Product {
+  id                String          @id @default(cuid())
+  category          Category
+  name              String
+  description       String
+  monthlyPriceCents Int             @default(0)
+  longDiscountPercent Int           @default(0)
+  maxPeople         Int             @default(1)
+  sessionsPerMonth  Int?
+  isActive          Boolean         @default(true)
+  stores            ProductStore[]
+  storePrices       PlanStorePrice[]
+  subscriptions     Subscription[]
+
+  @@unique([category, name])
+}
+
+model ProductStore {
+  productId String
+  storeId   String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store     Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([productId, storeId])
+}
+
+model PlanStorePrice {
+  id                String  @id @default(cuid())
+  productId         String
+  storeId           String
+  monthlyPriceCents Int
+  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store             Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, storeId])
+}
+
+model Subscription {
+  id                        String             @id @default(cuid())
+  clientId                  String
+  productId                 String
+  storeId                   String
+  commitment                Commitment
+  commitmentEndsAt          DateTime?
+  priceCents                Int                @default(0)
+  status                    SubscriptionStatus @default(PENDING_PAYMENT)
+  paymentMethod             PaymentMethod
+  currentPeriodStart        DateTime           @default(now())
+  currentPeriodEnd          DateTime
+  cancelAtPeriodEnd         Boolean            @default(false)
+  canceledAt                DateTime?
+  providerSubscriptionId    String?            @unique
+  providerCheckoutSessionId String?            @unique
+  activeKey                 String?            @unique
+  createdAt                 DateTime           @default(now())
+  client                    Client             @relation(fields: [clientId], references: [id])
+  product                   Product            @relation(fields: [productId], references: [id])
+  store                     Store              @relation(fields: [storeId], references: [id])
+  payments                  Payment[]
+
+  @@index([storeId, status])
+  @@index([clientId, productId, storeId, status])
+}
+
+model Payment {
+  id                    String       @id @default(cuid())
+  subscriptionId        String
+  amountCents           Int
+  status                PaymentStatus
+  providerChargeId      String?      @unique
+  recordedByAdminId     String?
+  exportedToInvoicing   Boolean      @default(false)
+  invoicingReference    String?
+  createdAt             DateTime     @default(now())
+  subscription          Subscription @relation(fields: [subscriptionId], references: [id])
+  recordedByAdmin       AdminUser?   @relation(fields: [recordedByAdminId], references: [id])
+
+  @@index([createdAt, status])
+}
+
+model ProcessedWebhook {
+  id          String   @id
+  processedAt DateTime @default(now())
+}
