@@ -5,21 +5,21 @@ import { getSession } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
 import { addUtcMonths } from "@/lib/dates";
 import { locales } from "@/lib/i18n";
+import { priceForHairLength } from "@/lib/pricing";
 
 export async function POST(req: Request) {
   const form = await req.formData();
   const productId = String(form.get("productId") || ""); const storeId = String(form.get("storeId") || "");
-  const commitment = String(form.get("commitment") || "SHORT"); const method = String(form.get("method") || "CASH");
+  const hairLength = String(form.get("hairLength") || "SHORT"); const method = String(form.get("method") || "CASH");
   const rawLocale = String(form.get("locale") || "pt"); const locale = (locales as readonly string[]).includes(rawLocale) ? rawLocale : "pt";
   const session = await getSession();
   if (!session || session.role !== "CLIENT") return NextResponse.redirect(new URL(`/${locale}/entrar`, req.url), 303);
   await syncExpiredCancellations();
-  if (!["SHORT", "LONG"].includes(commitment) || !["CASH", "STRIPE"].includes(method)) return NextResponse.json({ error: "Invalid selection" }, { status: 400 });
+  if (!["SHORT", "LONG"].includes(hairLength) || !["CASH", "STRIPE"].includes(method)) return NextResponse.json({ error: "Invalid selection" }, { status: 400 });
 
   const product = await db.product.findFirst({ where: { id: productId, isActive: true, stores: { some: { storeId } } }, include: { storePrices: { where: { storeId } } } });
   if (!product) return NextResponse.json({ error: "Membership unavailable" }, { status: 404 });
-  const basePrice = product.storePrices[0]?.monthlyPriceCents ?? product.monthlyPriceCents;
-  const selectedPrice = basePrice > 0 && commitment === "LONG" ? Math.max(1, Math.round(basePrice * (100 - product.longDiscountPercent) / 100)) : basePrice;
+  const selectedPrice = priceForHairLength(product, product.storePrices[0], hairLength as "SHORT" | "LONG");
   if (method === "STRIPE" && (!stripe || selectedPrice <= 0)) return NextResponse.json({ error: "Online recurring payment is not configured for this membership yet." }, { status: 400 });
 
   const activeKey = `${session.id}:${productId}:${storeId}`;
@@ -43,9 +43,9 @@ export async function POST(req: Request) {
     } catch { return NextResponse.redirect(new URL(`/${locale}/conta?paid=error`, req.url), 303); }
   }
 
-  const now = new Date(); const end = addUtcMonths(now, 1); const commitmentEndsAt = commitment === "LONG" ? addUtcMonths(now, 12) : null;
+  const now = new Date(); const end = addUtcMonths(now, 1);
   try {
-    subscription = await db.subscription.create({ data: { clientId: session.id, productId, storeId, activeKey, commitment: commitment as "SHORT" | "LONG", commitmentEndsAt, priceCents: selectedPrice, paymentMethod: method as "CASH" | "STRIPE", status: "PENDING_PAYMENT", currentPeriodStart: now, currentPeriodEnd: end } });
+    subscription = await db.subscription.create({ data: { clientId: session.id, productId, storeId, activeKey, hairLength: hairLength as "SHORT" | "LONG", priceCents: selectedPrice, paymentMethod: method as "CASH" | "STRIPE", status: "PENDING_PAYMENT", currentPeriodStart: now, currentPeriodEnd: end } });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return NextResponse.redirect(new URL(`/${locale}/conta?subscription=exists`, req.url), 303);
     throw error;

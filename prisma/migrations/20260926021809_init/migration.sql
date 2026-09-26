@@ -1,6 +1,3 @@
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
-
 -- CreateEnum
 CREATE TYPE "Locale" AS ENUM ('pt', 'en', 'es', 'fr', 'de');
 
@@ -8,7 +5,7 @@ CREATE TYPE "Locale" AS ENUM ('pt', 'en', 'es', 'fr', 'de');
 CREATE TYPE "Category" AS ENUM ('HAIRDRESSING', 'HEAD_SPA');
 
 -- CreateEnum
-CREATE TYPE "Commitment" AS ENUM ('SHORT', 'LONG');
+CREATE TYPE "HairLength" AS ENUM ('SHORT', 'LONG');
 
 -- CreateEnum
 CREATE TYPE "SubscriptionStatus" AS ENUM ('PENDING_PAYMENT', 'ACTIVE', 'PAST_DUE', 'UNPAID', 'CANCELED');
@@ -61,8 +58,8 @@ CREATE TABLE "Product" (
     "category" "Category" NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "monthlyPriceCents" INTEGER NOT NULL DEFAULT 0,
-    "longDiscountPercent" INTEGER NOT NULL DEFAULT 0,
+    "monthlyPriceCentsShort" INTEGER NOT NULL DEFAULT 0,
+    "monthlyPriceCentsLong" INTEGER NOT NULL DEFAULT 0,
     "maxPeople" INTEGER NOT NULL DEFAULT 1,
     "sessionsPerMonth" INTEGER,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
@@ -83,7 +80,8 @@ CREATE TABLE "PlanStorePrice" (
     "id" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
     "storeId" TEXT NOT NULL,
-    "monthlyPriceCents" INTEGER NOT NULL,
+    "monthlyPriceCentsShort" INTEGER,
+    "monthlyPriceCentsLong" INTEGER,
 
     CONSTRAINT "PlanStorePrice_pkey" PRIMARY KEY ("id")
 );
@@ -94,8 +92,7 @@ CREATE TABLE "Subscription" (
     "clientId" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
     "storeId" TEXT NOT NULL,
-    "commitment" "Commitment" NOT NULL,
-    "commitmentEndsAt" TIMESTAMP(3),
+    "hairLength" "HairLength" NOT NULL,
     "priceCents" INTEGER NOT NULL DEFAULT 0,
     "status" "SubscriptionStatus" NOT NULL DEFAULT 'PENDING_PAYMENT',
     "paymentMethod" "PaymentMethod" NOT NULL,

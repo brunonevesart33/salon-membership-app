@@ -20,7 +20,7 @@ enum Category {
   HEAD_SPA
 }
 
-enum Commitment {
+enum HairLength {
   SHORT
   LONG
 }
@@ -80,18 +80,18 @@ model Client {
 }
 
 model Product {
-  id                String          @id @default(cuid())
-  category          Category
-  name              String
-  description       String
-  monthlyPriceCents Int             @default(0)
-  longDiscountPercent Int           @default(0)
-  maxPeople         Int             @default(1)
-  sessionsPerMonth  Int?
-  isActive          Boolean         @default(true)
-  stores            ProductStore[]
-  storePrices       PlanStorePrice[]
-  subscriptions     Subscription[]
+  id                     String          @id @default(cuid())
+  category               Category
+  name                   String
+  description            String
+  monthlyPriceCentsShort Int             @default(0)
+  monthlyPriceCentsLong  Int             @default(0)
+  maxPeople              Int             @default(1)
+  sessionsPerMonth       Int?
+  isActive               Boolean         @default(true)
+  stores                 ProductStore[]
+  storePrices            PlanStorePrice[]
+  subscriptions          Subscription[]
 
   @@unique([category, name])
 }
@@ -106,12 +106,13 @@ model ProductStore {
 }
 
 model PlanStorePrice {
-  id                String  @id @default(cuid())
-  productId         String
-  storeId           String
-  monthlyPriceCents Int
-  product           Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  store             Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id                     String  @id @default(cuid())
+  productId              String
+  storeId                String
+  monthlyPriceCentsShort Int?
+  monthlyPriceCentsLong  Int?
+  product                Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store                  Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@unique([productId, storeId])
 }
@@ -121,8 +122,7 @@ model Subscription {
   clientId                  String
   productId                 String
   storeId                   String
-  commitment                Commitment
-  commitmentEndsAt          DateTime?
+  hairLength                HairLength
   priceCents                Int                @default(0)
   status                    SubscriptionStatus @default(PENDING_PAYMENT)
   paymentMethod             PaymentMethod

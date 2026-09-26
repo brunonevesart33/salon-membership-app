@@ -7,11 +7,17 @@ async function main() {
     prisma.store.upsert({ where: { slug: "portimao" }, update: {}, create: { slug: "portimao", name: "Portimão" } }),
     prisma.store.upsert({ where: { slug: "tavira" }, update: {}, create: { slug: "tavira", name: "Tavira" } }),
   ]);
+  const hairPlans = [
+    { name: "Pro", description: "1 hairdressing visit per month", monthlyPriceCentsShort: 4100, monthlyPriceCentsLong: 5100, maxPeople: 1 },
+    { name: "Pro+", description: "2 hairdressing visits per month", monthlyPriceCentsShort: 0, monthlyPriceCentsLong: 0, maxPeople: 1 },
+    { name: "Premium", description: "Hair membership · 1 person", monthlyPriceCentsShort: 0, monthlyPriceCentsLong: 0, maxPeople: 1 },
+    { name: "Family", description: "Hair membership · up to 4 people", monthlyPriceCentsShort: 0, monthlyPriceCentsLong: 0, maxPeople: 4 },
+  ];
   const products = [
-    ...["Pro", "Pro+", "Premium", "Family"].map((name, i) => ({ category: Category.HAIRDRESSING, name, description: `Hair membership · ${i === 3 ? "up to 4 people" : "1 person"}`, monthlyPriceCents: 0, maxPeople: i === 3 ? 4 : 1, sessionsPerMonth: null })),
+    ...hairPlans.map((plan) => ({ category: Category.HAIRDRESSING, ...plan, sessionsPerMonth: null })),
     ...[1, 2, 3, 4].flatMap((n) => [
-      { category: Category.HEAD_SPA, name: `Head Spa ${n}x · Individual`, description: `${n} session${n > 1 ? "s" : ""} per month`, monthlyPriceCents: 0, maxPeople: 1, sessionsPerMonth: n },
-      { category: Category.HEAD_SPA, name: `Head Spa ${n}x · Family`, description: `${n} shared session${n > 1 ? "s" : ""} per month · up to 4 people`, monthlyPriceCents: 0, maxPeople: 4, sessionsPerMonth: n },
+      { category: Category.HEAD_SPA, name: `Head Spa ${n}x · Individual`, description: `${n} session${n > 1 ? "s" : ""} per month`, monthlyPriceCentsShort: 0, monthlyPriceCentsLong: 0, maxPeople: 1, sessionsPerMonth: n },
+      { category: Category.HEAD_SPA, name: `Head Spa ${n}x · Family`, description: `${n} shared session${n > 1 ? "s" : ""} per month · up to 4 people`, monthlyPriceCentsShort: 0, monthlyPriceCentsLong: 0, maxPeople: 4, sessionsPerMonth: n },
     ]),
   ];
   for (const product of products) {
